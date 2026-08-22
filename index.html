@@ -1,0 +1,795 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>درس × لعبة - الأرض والنظام الشمسى</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap');
+        body { font-family: 'Tajawal', sans-serif; background-color: #f0fdfa; user-select: none; overflow-x: hidden; }
+        .glass-panel { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1); }
+        .btn-bounce { transition: transform 0.2s; }
+        .btn-bounce:active { transform: scale(0.95); }
+        
+        /* Matching Game Styles */
+        .match-item { transition: all 0.3s; }
+        .match-item.selected { background-color: #fef08a; border-color: #eab308; transform: scale(1.05); }
+        .match-item.matched { background-color: #86efac; border-color: #22c55e; opacity: 0.7; pointer-events: none; }
+        .match-item.error { background-color: #fca5a5; border-color: #ef4444; animation: shake 0.5s; }
+        .match-item.timeout-error { background-color: #fecaca; border-color: #ef4444; opacity: 0.6; pointer-events: none; }
+        
+        /* Bubbles Style */
+        .game-bubble {
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(186, 230, 253, 0.7) 60%, rgba(56, 189, 248, 0.4));
+            box-shadow: inset 0 0 15px rgba(255,255,255,0.8), 0 4px 10px rgba(0,0,0,0.15);
+            border: 1px solid rgba(255,255,255,0.6);
+            backdrop-filter: blur(4px);
+            color: #0c4a6e;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+        }
+
+        /* Targets Style */
+        .horizontal-target {
+            background-color: white;
+            border: 4px solid;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Robust CSS Animations */
+        @keyframes fallDown { from { top: -150px; } to { top: 120%; } }
+        @keyframes moveRight { from { left: -150px; } to { left: 120%; } }
+        @keyframes moveLeft { from { left: 100%; } to { left: -150px; } }
+        
+        .anim-fall { animation: fallDown 25s linear forwards; }
+        .anim-right { animation: moveRight 20s linear forwards; }
+        .anim-left { animation: moveLeft 20s linear forwards; }
+
+        @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-5px);} 75% {transform: translateX(5px);} }
+        .popup-anim { animation: popIn 0.3s ease-out forwards; }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.5); } 100% { opacity: 1; transform: scale(1); } }
+    </style>
+</head>
+<body class="text-gray-800 min-h-screen pb-20 relative">
+
+    <!-- GLOBAL FIXED HEADER (Safe top bar for logo) -->
+    <header class="fixed top-0 w-full bg-white/95 backdrop-blur-md shadow-sm z-50 h-20 flex items-center px-4 md:px-8 border-b border-teal-100 transition-all">
+        <img src="logo.jpeg" alt="Logo" class="w-14 h-14 md:w-16 md:h-16 rounded-xl shadow-sm object-cover border border-teal-200 bg-white" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2YxZjVmOSIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjIwIiBmaWxsPSIjOTRjM2Q4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjMiPkxvZ288L3RleHQ+PC9zdmc+'; this.onerror=null;">
+        <h1 class="mr-4 font-extrabold text-teal-800 text-lg md:text-2xl drop-shadow-sm">درس × لعبة</h1>
+    </header>
+
+    <!-- Main Container (Pushed down to avoid overlap with fixed header) -->
+    <div class="max-w-4xl mx-auto p-4 relative pt-28" id="main-container">
+        
+        <!-- Main Dashboard Screen -->
+        <div id="screen-home" class="space-y-6">
+            <!-- Header Section -->
+            <div class="glass-panel rounded-2xl p-6 shadow-lg relative overflow-hidden flex flex-col md:flex-row items-center gap-6 mt-4">
+                <div class="absolute -top-10 -right-10 w-32 h-32 bg-teal-200 rounded-full opacity-50 blur-xl"></div>
+                <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-200 rounded-full opacity-50 blur-xl"></div>
+                
+                <div class="w-full md:w-1/2 text-center md:text-right z-10 flex flex-col justify-center">
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-700 mb-2">الصف الأول الإعدادي - الترم الأول</h2>
+                    <h3 class="text-xl md:text-2xl text-teal-600 font-extrabold mb-4">درس: الأرض والنظام الشمسى</h3>
+                    
+                    <div class="mt-4 border-t border-teal-100 pt-4">
+                        <p class="text-sm text-gray-500 font-bold">مع الأستاذ</p>
+                        <p class="text-2xl font-bold text-teal-800">حبيب بُشرى</p>
+                    </div>
+                </div>
+
+                <div class="w-full md:w-1/2 z-10 flex justify-center md:justify-end">
+                    <img src="pic.jpeg" alt="صورة المعلم" class="w-48 h-48 sm:w-64 sm:h-64 md:w-full md:max-w-[300px] aspect-square rounded-2xl border-4 border-teal-400 shadow-xl object-cover bg-teal-50" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2YxZjVmOSIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjIwIiBmaWxsPSIjOTRjM2Q4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjMiPkxvZ288L3RleHQ+PC9zdmc+'; this.onerror=null;">
+                </div>
+            </div>
+
+            <h3 class="text-center font-bold text-gray-600 mt-8 mb-4">اختر اللعبة لتبدأ التحدي</h3>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- 1. MCQ -->
+                <button onclick="startGame('mcq')" class="btn-bounce bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="text-right">
+                        <h4 class="font-bold text-lg">الاختيار من متعدد</h4>
+                        <p class="text-xs text-blue-100">15 سؤال لاختبار معلوماتك</p>
+                    </div>
+                    <i class="fa-solid fa-list-check text-3xl opacity-80"></i>
+                </button>
+
+                <!-- 2. Bubbles -->
+                <button onclick="startGame('bubbles')" class="btn-bounce bg-gradient-to-r from-cyan-500 to-cyan-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="text-right">
+                        <h4 class="font-bold text-lg">الفقاعات المتساقطة</h4>
+                        <p class="text-xs text-cyan-100">المس الفقاعة الصحيحة قبل سقوطها</p>
+                    </div>
+                    <i class="fa-solid fa-droplet text-3xl opacity-80"></i>
+                </button>
+
+                <!-- 3. Shoot (Targets) -->
+                <button onclick="startGame('shoot')" class="btn-bounce bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="text-right">
+                        <h4 class="font-bold text-lg">التنشين المتحرك</h4>
+                        <p class="text-xs text-red-100">صِد الهدف الصحيح المتحرك</p>
+                    </div>
+                    <i class="fa-solid fa-bullseye text-3xl opacity-80"></i>
+                </button>
+
+                <!-- 4. True/False -->
+                <button onclick="startGame('tf')" class="btn-bounce bg-gradient-to-r from-orange-500 to-orange-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="text-right">
+                        <h4 class="font-bold text-lg">صح أم خطأ</h4>
+                        <p class="text-xs text-orange-100">حدد صحة العبارات</p>
+                    </div>
+                    <i class="fa-solid fa-check-double text-3xl opacity-80"></i>
+                </button>
+
+                <!-- 5. Matching -->
+                <button onclick="startGame('match')" class="btn-bounce bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="text-right">
+                        <h4 class="font-bold text-lg">لعبة التوصيل</h4>
+                        <p class="text-xs text-green-100">اربط بين المفاهيم الصحيحة</p>
+                    </div>
+                    <i class="fa-solid fa-link text-3xl opacity-80"></i>
+                </button>
+
+                <!-- 6. Fill in the Blanks -->
+                <button onclick="startGame('fill')" class="btn-bounce bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="text-right">
+                        <h4 class="font-bold text-lg">الكلمة المفقودة</h4>
+                        <p class="text-xs text-purple-100">أكمل الفراغ لتكتمل العبارة</p>
+                    </div>
+                    <i class="fa-solid fa-puzzle-piece text-3xl opacity-80"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Shared Internal Game Header (Compact) -->
+        <div id="game-header" class="hidden mb-6 bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3">
+            <div class="flex justify-between items-center w-full">
+                <button onclick="goHome()" class="btn-bounce bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg font-bold text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-right"></i> للرئيسية
+                </button>
+                
+                <div class="flex items-center gap-3">
+                    <div class="text-left hidden sm:block">
+                        <p class="text-xs text-gray-500 font-bold">أ. حبيب بُشرى</p>
+                        <p class="text-sm font-bold text-teal-700">الأرض والنظام الشمسى</p>
+                    </div>
+                    <img src="pic.jpeg" class="w-10 h-10 rounded-full border-2 border-teal-500 object-cover bg-gray-100" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjQ1IiByPSIyMCIgZmlsbD0iI2RjZmNlNyIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iMTA1IiByPSI0NSIgZmlsbD0iI2RjZmNlNyIvPjwvc3ZnPg==';">
+                </div>
+            </div>
+            
+            <div class="flex justify-between items-center w-full border-t border-gray-100 pt-2">
+                <div id="timer-container" class="flex flex-col w-1/3 transition-opacity duration-300">
+                    <div class="flex items-center gap-1 text-red-600 font-bold text-sm">
+                        <i class="fa-solid fa-stopwatch"></i> الوقت: <span id="timer-display">60</span>ث
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                        <div id="timer-bar" class="bg-red-500 h-1.5 rounded-full" style="width: 100%; transition: width 1s linear;"></div>
+                    </div>
+                </div>
+
+                <h2 id="current-game-title" class="text-base sm:text-lg font-bold text-teal-700 text-center w-1/3">عنوان اللعبة</h2>
+                
+                <div class="text-sm sm:text-base font-bold text-gray-600 bg-gray-50 px-3 py-1 rounded-lg border w-1/3 text-left">
+                    النتيجة: <span id="current-score" class="text-teal-600">0</span>/15
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Screens Container -->
+        
+        <!-- 1. MCQ Game -->
+        <div id="screen-mcq" class="hidden game-screen">
+            <div class="glass-panel p-6 rounded-2xl">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-6">
+                    <div id="mcq-progress" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <h3 id="mcq-question" class="text-2xl font-bold text-gray-800 mb-6 text-center leading-relaxed"></h3>
+                <div id="mcq-options" class="grid grid-cols-1 gap-3"></div>
+            </div>
+        </div>
+
+        <!-- 2. Bubbles Game (Vertical Falling) -->
+        <div id="screen-bubbles" class="hidden game-screen">
+            <div class="glass-panel p-6 rounded-2xl">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                    <div id="bubbles-progress" class="bg-cyan-500 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <div class="bg-cyan-50 border border-cyan-200 rounded-xl p-4 mb-4 text-center">
+                    <h3 id="bubbles-question" class="text-xl font-bold text-gray-800"></h3>
+                </div>
+                <div id="bubbles-game-area" class="relative w-full h-[450px] overflow-hidden rounded-xl shadow-inner bg-gradient-to-b from-blue-50 to-cyan-100">
+                    <!-- Bubbles injected via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Shoot Game (Horizontal Targets) -->
+        <div id="screen-shoot" class="hidden game-screen">
+            <div class="glass-panel p-6 rounded-2xl">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                    <div id="shoot-progress" class="bg-red-500 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 text-center">
+                    <h3 id="shoot-question" class="text-xl font-bold text-gray-800"></h3>
+                </div>
+                <div id="shoot-game-area" class="relative w-full h-[450px] overflow-hidden bg-gray-900 border-4 border-gray-700 rounded-xl shadow-inner">
+                    <!-- Targets injected via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. True/False Game -->
+        <div id="screen-tf" class="hidden game-screen">
+            <div class="glass-panel p-6 rounded-2xl flex flex-col">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-6">
+                    <div id="tf-progress" class="bg-orange-500 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <p class="text-center font-bold text-gray-600 mb-6 text-lg">اقرأ العبارة وحدد: صح أم خطأ؟</p>
+                <div class="flex items-center justify-center mb-8">
+                    <div id="tf-statement" class="bg-white border-2 border-orange-300 text-gray-800 font-bold text-xl md:text-2xl py-8 px-6 rounded-2xl shadow-md w-full text-center min-h-[150px] flex items-center justify-center leading-relaxed"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 w-full">
+                    <button onclick="checkTF(true)" class="btn-bounce bg-green-500 hover:bg-green-600 text-white p-6 rounded-xl flex flex-col items-center gap-2 shadow-lg">
+                        <i class="fa-solid fa-check text-5xl mb-2"></i><span class="font-bold text-xl md:text-2xl">صح</span>
+                    </button>
+                    <button onclick="checkTF(false)" class="btn-bounce bg-red-500 hover:bg-red-600 text-white p-6 rounded-xl flex flex-col items-center gap-2 shadow-lg">
+                        <i class="fa-solid fa-xmark text-5xl mb-2"></i><span class="font-bold text-xl md:text-2xl">خطأ</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Match Game -->
+        <div id="screen-match" class="hidden game-screen">
+            <div class="glass-panel p-4 rounded-2xl">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                    <div id="match-progress" class="bg-green-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <p class="text-center text-gray-600 mb-4 font-bold">المس عنصراً من القائمة الأولى ثم ما يناسبه من الثانية</p>
+                <div class="flex gap-4 justify-between" id="match-container">
+                    <div class="w-1/2 space-y-2 flex flex-col" id="match-list-a"></div>
+                    <div class="w-1/2 space-y-2 flex flex-col" id="match-list-b"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Fill in the Blanks Game -->
+        <div id="screen-fill" class="hidden game-screen">
+            <div class="glass-panel p-4 md:p-6 rounded-2xl flex flex-col">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4 md:mb-6">
+                    <div id="fill-progress" class="bg-purple-500 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <p class="text-center font-bold text-gray-600 mb-4 md:mb-6 text-sm md:text-lg">اختر الكلمة المناسبة لتكملة العبارة</p>
+                <div class="bg-white border-2 border-purple-200 py-6 px-4 md:py-8 md:px-6 rounded-2xl shadow-sm text-center mb-6 flex items-center justify-center min-h-[120px] md:min-h-[160px]">
+                    <h3 id="fill-sentence" class="text-lg sm:text-xl md:text-3xl font-bold text-gray-800 leading-loose"></h3>
+                </div>
+                <div id="fill-options" class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div id="feedback-content" class="bg-white rounded-2xl p-6 max-w-sm w-full text-center transform scale-50 opacity-0 transition-all duration-300">
+            <div id="feedback-icon" class="text-6xl mb-4"></div>
+            <h3 id="feedback-title" class="text-2xl font-bold mb-2"></h3>
+            <p id="feedback-msg" class="text-gray-600 mb-6 font-bold text-lg leading-relaxed"></p>
+            <button onclick="closeFeedback()" class="bg-teal-500 text-white font-bold py-3 px-8 rounded-xl shadow-md w-full hover:bg-teal-600 transition-colors">متابعة</button>
+        </div>
+    </div>
+
+    <!-- End Game Modal -->
+    <div id="endgame-modal" class="fixed inset-0 bg-teal-900 bg-opacity-95 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full text-center shadow-2xl">
+            <i class="fa-solid fa-trophy text-6xl text-yellow-400 mb-4"></i>
+            <h2 class="text-3xl font-bold text-teal-800 mb-2">اكتملت اللعبة!</h2>
+            <p class="text-xl text-gray-700 mb-6 font-bold">لقد حققت <span id="endgame-score" class="text-teal-600 text-2xl">15</span> من 15</p>
+            <button onclick="goHome()" class="w-full bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold py-4 rounded-xl shadow-lg text-xl btn-bounce">
+                العودة للرئيسية
+            </button>
+        </div>
+    </div>
+
+    <!-- WhatsApp -->
+    <a href="https://wa.me/201008822782" target="_blank" class="fixed bottom-6 right-6 bg-green-500 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:bg-green-600 hover:scale-110 transition-all z-40 btn-bounce border-2 border-white z-50">
+        <i class="fa-brands fa-whatsapp text-3xl"></i>
+    </a>
+
+    <script>
+        // --- Utility Functions ---
+        function shuffleArray(originalArray) {
+            let array = originalArray.slice(); 
+            let currentIndex = array.length, randomIndex, tempValue;
+            while (currentIndex > 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                tempValue = array[currentIndex];
+                array[currentIndex] = array[randomIndex];
+                array[randomIndex] = tempValue;
+            }
+            return array;
+        }
+
+        // --- Audio Engine (Disabled as requested) ---
+        function initAudio() {}
+        document.addEventListener('pointerdown', initAudio, { once: true });
+        document.addEventListener('keydown', initAudio, { once: true });
+        function playSound(type) { return; }
+
+        // --- Data Datasets (10 Normal + 5 Hard) per Game (Based ONLY on the provided PDF) ---
+        
+        const mcqData = [
+            { q: "تتكون المجموعة الشمسية من نجم هو الشمس يدور حوله عدد من الكواكب قدره:", options: ["8 كواكب", "9 كواكب", "7 كواكب", "10 كواكب"], ans: "8 كواكب" },
+            { q: "الكوكب الذى له قشرة رقيقة جدًا مليئة بالحفر الناتجة عن سقوط النيازك ولا توجد به براكين نشطة هو:", options: ["عطارد", "الزهرة", "الأرض", "المريخ"], ans: "عطارد" },
+            { q: "الكوكب الذى يتميز بغلاف جوى مكون من غاز ثانى أكسيد الكربون بشكل رئيسى وله قشرة سميكة مقاربة لقشرة كوكب عطارد هو:", options: ["الزهرة", "الأرض", "المريخ", "المشترى"], ans: "الزهرة" },
+            { q: "الكوكب الذى غلافه الجوى مكون من غازى النيتروجين والأكسجين بشكل رئيسى وهو كوكب الحياة هو:", options: ["الأرض", "الزهرة", "المريخ", "زحل"], ans: "الأرض" },
+            { q: "الكوكب المعروف بالكوكب الأحمر والذى توجد به آثار براكين ضخمة لكن لا يوجد به نشاط بركانى حاليًا هو:", options: ["المريخ", "المشترى", "زحل", "أورانوس"], ans: "المريخ" },
+            { q: "أكبر كواكب المجموعة الشمسية قطرًا وهو كوكب غازى ليس له قشرة ويتكون من غازات فقط هو:", options: ["المشترى", "زحل", "أورانوس", "نبتون"], ans: "المشترى" },
+            { q: "الكوكب الذى يشبه كوكب المشترى فى مكونات غلافه الجوى وله نفس مكونات المشترى تقريبًا هو:", options: ["زحل", "أورانوس", "نبتون", "المريخ"], ans: "زحل" },
+            { q: "الكوكب المعروف بالكوكب الأزرق بسبب احتواء غلافه الجوى على غاز الميثان الذى يمنحه هذا اللون هو:", options: ["أورانوس", "نبتون فقط دون أورانوس", "زحل", "المشترى"], ans: "أورانوس" },
+            { q: "كوكب نبتون يشبه كوكب أورانوس ويُعرف بالكوكب الأزرق أيضًا حيث:", options: ["له نفس مكونات الغلاف الجوى لأورانوس تقريبًا", "غلافه الجوى مكون من الأكسجين والنيتروجين", "له قشرة صخرية سميكة جدًا", "توجد به براكين نشطة كثيرة"], ans: "له نفس مكونات الغلاف الجوى لأورانوس تقريبًا" },
+            { q: "تدور الأرض دورة كاملة حول محورها الوهمى الممتد من القطب الشمالى إلى القطب الجنوبى كل:", options: ["24 ساعة", "12 ساعة", "365 يومًا", "30 يومًا"], ans: "24 ساعة" },
+            // Hard
+            { q: "يميل محور الأرض بزاوية مقدارها عن الخط العمودى على مستوى مدارها حول الشمس:", options: ["23.5 درجة", "45 درجة", "90 درجة", "0 درجة"], ans: "23.5 درجة" },
+            { q: "الحركة التى تبدو فيها الشمس وكأن موقعها يتغير من الشرق إلى الغرب فى السماء أثناء دوران الأرض حول محورها تسمى:", options: ["الحركة الظاهرية للشمس", "الحركة الحقيقية للشمس", "الحركة المدارية للشمس", "حركة الشمس الذاتية"], ans: "الحركة الظاهرية للشمس" },
+            { q: "يكون طول الظل المتكون من عصا مثبتة فى الأرض أقل ما يمكن فى فترة:", options: ["الظهيرة", "الشروق", "الغروب", "منتصف الليل"], ans: "الظهيرة" },
+            { q: "تتعاقب فصول السنة الأربعة نتيجة ميل محور الأرض وكذلك دوران الأرض حول الشمس على مدار:", options: ["365 يومًا وربع اليوم", "24 ساعة فقط", "30 يومًا فقط", "12 ساعة فقط"], ans: "365 يومًا وربع اليوم" },
+            { q: "الانقلاب الصيفى الذى يبدأ فيه فصل الصيف يقع فى تاريخ:", options: ["21 يونيو", "21 مارس", "23 سبتمبر", "22 ديسمبر"], ans: "21 يونيو" }
+        ];
+
+        const bubblesData = [
+            { q: "أصغر كواكب المجموعة الشمسية قطرًا وأقربها إلى الشمس هو:", options: ["عطارد", "الزهرة", "الأرض", "المريخ"], ans: "عطارد" },
+            { q: "الكوكب الذى يُعد أقرب الكواكب فى تكوين غلافه الجوى إلى كوكب عطارد هو:", options: ["الزهرة", "الأرض", "المريخ", "زحل"], ans: "الزهرة" },
+            { q: "الكوكب الذى وُصف بأنه كوكب الحياة لاحتوائه على الأكسجين والنيتروجين هو:", options: ["الأرض", "الزهرة", "عطارد", "المريخ"], ans: "الأرض" },
+            { q: "الكوكب الذى تشير قشرته السميكة المقاربة لسمك قشرة الأرض ولونه الأحمر إلى وجود أكسيد الحديد به هو:", options: ["المريخ", "المشترى", "زحل", "نبتون"], ans: "المريخ" },
+            { q: "الكواكب الغازية التى ليس لها قشرة صلبة وتتكون أساسًا من غازات هى:", options: ["المشترى وزحل وأورانوس ونبتون", "عطارد والزهرة والأرض والمريخ", "عطارد والمريخ فقط", "الأرض وزحل فقط"], ans: "المشترى وزحل وأورانوس ونبتون" },
+            { q: "دوران الأرض حول محورها مرة كل 24 ساعة تقريبًا مسئول عن تعاقب:", options: ["الليل والنهار", "فصول السنة الأربعة", "المد والجزر فقط", "خسوف القمر فقط"], ans: "الليل والنهار" },
+            { q: "دوران الأرض حول الشمس مرة كل 365 يومًا وربع مسئول عن تعاقب:", options: ["فصول السنة الأربعة", "الليل والنهار فقط", "المد والجزر فقط", "أطوار القمر فقط"], ans: "فصول السنة الأربعة" },
+            { q: "ميل محور الأرض يؤدى إلى اختلاف زاوية سقوط أشعة الشمس على مناطق الأرض المختلفة وبالتالى اختلاف:", options: ["شدة الضوء الساقط على وحدة المساحات", "سرعة دوران الأرض حول محورها", "المسافة بين الأرض والشمس", "عدد ساعات اليوم الكامل (24 ساعة)"], ans: "شدة الضوء الساقط على وحدة المساحات" },
+            { q: "أداة قديمة استخدمت لتحديد الوقت اعتمادًا على طول الظل واتجاهه الناتج عن الحركة الظاهرية للشمس تسمى:", options: ["المزولة (الساعة الشمسية)", "البوصلة", "الإلكتروسكوب", "الميزان الزنبركى"], ans: "المزولة (الساعة الشمسية)" },
+            { q: "يكون طول الظل المتكون من عصا مثبتة فى الأرض أطول ما يمكن فى وقت:", options: ["الشروق أو الغروب", "الظهيرة", "منتصف النهار", "لا يتغير الظل إطلاقًا"], ans: "الشروق أو الغروب" },
+            // Hard
+            { q: "الفصل الذى يبدأ بالاعتدال الربيعى فى 21 مارس هو فصل:", options: ["الربيع", "الصيف", "الخريف", "الشتاء"], ans: "الربيع" },
+            { q: "الفصل الذى يبدأ بالانقلاب الشتوى فى 22 ديسمبر هو فصل:", options: ["الشتاء", "الصيف", "الربيع", "الخريف"], ans: "الشتاء" },
+            { q: "الفصل الذى يبدأ بالاعتدال الخريفى فى 23 سبتمبر هو فصل:", options: ["الخريف", "الشتاء", "الربيع", "الصيف"], ans: "الخريف" },
+            { q: "فى فصل الصيف يكون عدد ساعات النهار بالنسبة لعدد ساعات الليل فى مصر:", options: ["أكبر (النهار أطول من الليل)", "أقل (الليل أطول من النهار)", "متساويين تمامًا فى كل الأيام", "لا علاقة بينهما إطلاقًا"], ans: "أكبر (النهار أطول من الليل)" },
+            { q: "تختلف مواسم زراعة وحصاد المحاصيل الزراعية فى مصر باختلاف فصول السنة، فالبطيخ والخيار والكوسة من محاصيل:", options: ["الصيف", "الشتاء", "الخريف فقط", "لا ترتبط بفصل معين"], ans: "الصيف" }
+        ];
+
+        const shootData = [
+            { q: "يوضح جدول بيانات كواكب المجموعة الشمسية أن كوكب عطارد له أقل قطر بين الكواكب الثمانية ويبلغ تقريبًا:", options: ["4878 كم", "12756 كم", "142948 كم", "49660 كم"], ans: "4878 كم" },
+            { q: "قطر كوكب الأرض من بيانات الجدول يبلغ تقريبًا:", options: ["12756 كم", "4878 كم", "6787 كم", "120536 كم"], ans: "12756 كم" },
+            { q: "أكبر كواكب المجموعة الشمسية قطرًا هو كوكب المشترى ويبلغ قطره تقريبًا:", options: ["142948 كم", "51118 كم", "49660 كم", "120536 كم"], ans: "142948 كم" },
+            { q: "الكوكب الذى قشرته أسمك من قشرة كوكب الزهرة من بين الكواكب الصخرية هو:", options: ["الأرض", "عطارد", "الزهرة نفسها", "المريخ فقط أسمك من الكل"], ans: "الأرض" },
+            { q: "لا يوجد نشاط بركانى حاليًا فى كوكب المريخ رغم وجود آثار براكين ضخمة فيه، بينما يوجد نشاط بركانى فى كوكبى الزهرة و:", options: ["الأرض", "عطارد", "المشترى", "زحل"], ans: "الأرض" },
+            { q: "خطوط الأشعة الساقطة على سطح الأرض تكون عمودية فى منطقة معينة وأشعة مائلة فى مناطق أخرى بسبب:", options: ["ميل محور الأرض", "بعد الأرض عن الشمس فقط", "دوران القمر حول الأرض", "دوران الأرض حول محورها فقط بلا ميل"], ans: "ميل محور الأرض" },
+            { q: "الحركة الظاهرية للشمس التى تبدو فيها الشمس متحركة من الشرق للغرب فى السماء أثناء اليوم ناتجة عن:", options: ["دوران الأرض الحقيقى حول محورها من الغرب إلى الشرق", "دوران الشمس الحقيقى حول الأرض", "ثبات الأرض تمامًا دون حركة", "دوران القمر حول الأرض"], ans: "دوران الأرض الحقيقى حول محورها من الغرب إلى الشرق" },
+            { q: "أطول ارتفاع ظاهرى للشمس خلال اليوم الواحد يكون فى فصل الصيف بينما أقل ارتفاع ظاهرى للشمس يكون فى فصل:", options: ["الشتاء", "الربيع", "الخريف", "لا يختلف باختلاف الفصل"], ans: "الشتاء" },
+            { q: "طول الظل المتكون من عصا مثبتة يكون أقصر ما يمكن عندما يكون الارتفاع الظاهرى للشمس عن الأفق:", options: ["أكبر ما يمكن (وقت الظهيرة)", "أقل ما يمكن (وقت الشروق)", "معدومًا تمامًا فى كل الأوقات", "متساويًا فى كل وقت"], ans: "أكبر ما يمكن (وقت الظهيرة)" },
+            { q: "تعاقب فصول السنة الأربعة يرتبط بميل محور الأرض ودورانها حول الشمس، وهو ما يؤدى أيضًا إلى اختلاف:", options: ["ساعات النهار والليل بين الفصول", "سرعة دوران الأرض حول محورها فقط", "المسافة بين الأرض والقمر فقط", "عدد ساعات اليوم عن 24 ساعة"], ans: "ساعات النهار والليل بين الفصول" },
+            // Hard
+            { q: "بحسب جدول شروق وغروب الشمس فى مصر، يكون النهار فى 21 مارس (الاعتدال الربيعى) تقريبًا:", options: ["مساويًا لليل تقريبًا (حوالى 12 ساعة)", "أطول بكثير من الليل", "أقصر بكثير من الليل", "معدومًا تمامًا"], ans: "مساويًا لليل تقريبًا (حوالى 12 ساعة)" },
+            { q: "يكون النهار أطول ما يمكن فى مصر فى تاريخ:", options: ["13 يوليو تقريبًا (قرب الانقلاب الصيفى)", "22 ديسمبر (الانقلاب الشتوى)", "21 مارس (الاعتدال الربيعى)", "23 سبتمبر (الاعتدال الخريفى)"], ans: "13 يوليو تقريبًا (قرب الانقلاب الصيفى)" },
+            { q: "يكون النهار أقصر ما يمكن فى مصر فى تاريخ:", options: ["22 ديسمبر تقريبًا (الانقلاب الشتوى)", "13 يوليو (قرب الانقلاب الصيفى)", "21 مارس (الاعتدال الربيعى)", "23 سبتمبر (الاعتدال الخريفى)"], ans: "22 ديسمبر تقريبًا (الانقلاب الشتوى)" },
+            { q: "تختلف مواسم زراعة وحصاد المحاصيل فى مصر باختلاف فصول السنة، فالبرتقال والقمح والبرسيم والخس من محاصيل:", options: ["الشتاء", "الصيف", "الخريف فقط", "لا ترتبط بفصل معين"], ans: "الشتاء" },
+            { q: "يؤدى ميل محور الأرض وثبات اتجاهه أثناء دورانها حول الشمس إلى اختلاف كمية ضوء الشمس التى يستقبلها كل نصف من الكرة الأرضية خلال السنة، وهذا يفسر:", options: ["تعاقب الفصول الأربعة", "تعاقب الليل والنهار فقط", "ظاهرة المد والجزر فقط", "خسوف القمر فقط"], ans: "تعاقب الفصول الأربعة" }
+        ];
+
+        const tfData = [
+            { text: "تتكون المجموعة الشمسية من الشمس وثمانية كواكب تدور حولها فى مدارات بيضاوية الشكل.", isCorrect: true },
+            { text: "كوكب عطارد له قشرة سميكة جدًا ولا يحتوي على أى حفر ناتجة عن سقوط النيازك.", isCorrect: false },
+            { text: "كوكب الأرض هو كوكب الحياة الذى يحتوى غلافه الجوى على الأكسجين والنيتروجين.", isCorrect: true },
+            { text: "كوكب المريخ يعرف بالكوكب الأحمر وله آثار براكين ضخمة لكن لا نشاط بركانى حاليًا فيه.", isCorrect: true },
+            { text: "المشترى وزحل وأورانوس ونبتون كواكب غازية ليس لها قشرة صلبة.", isCorrect: true },
+            { text: "تدور الأرض حول محورها دورة كاملة كل 365 يومًا.", isCorrect: false },
+            { text: "يميل محور الأرض بزاوية 23.5 درجة عن العمودى على مستوى مدارها حول الشمس.", isCorrect: true },
+            { text: "الحركة الظاهرية للشمس هى ظاهرة تبدو فيها الشمس متحركة من الشرق للغرب نتيجة دوران الأرض حول محورها.", isCorrect: true },
+            { text: "يكون طول الظل المتكون من عصا مثبتة أطول ما يمكن فى وقت الظهيرة.", isCorrect: false },
+            { text: "تتعاقب فصول السنة الأربعة نتيجة ميل محور الأرض ودورانها حول الشمس.", isCorrect: true },
+            // Hard
+            { text: "يبدأ فصل الصيف بالانقلاب الصيفى فى 21 يونيو.", isCorrect: true },
+            { text: "يبدأ فصل الشتاء بالانقلاب الشتوى فى 22 ديسمبر.", isCorrect: true },
+            { text: "يكون النهار أطول ما يمكن فى مصر بالقرب من تاريخ 22 ديسمبر.", isCorrect: false },
+            { text: "تُستخدم المزولة (الساعة الشمسية) لتحديد الوقت اعتمادًا على طول الظل واتجاهه.", isCorrect: true },
+            { text: "البطيخ والخيار والكوسة من المحاصيل الزراعية الصيفية فى مصر.", isCorrect: true }
+        ];
+
+        const matchData = [
+            { a: "المجموعة الشمسية", b: "تتكون من الشمس وثمانية كواكب تدور حولها" },
+            { a: "عطارد", b: "أصغر الكواكب قطرًا وأقربها للشمس وله قشرة رقيقة مليئة بالحفر" },
+            { a: "الأرض", b: "كوكب الحياة الذى يحتوى غلافه الجوى على الأكسجين والنيتروجين" },
+            { a: "المريخ", b: "يُعرف بالكوكب الأحمر وله آثار براكين ضخمة" },
+            { a: "المشترى", b: "أكبر كواكب المجموعة الشمسية قطرًا وهو كوكب غازى" },
+            { a: "أورانوس", b: "يُعرف بالكوكب الأزرق بسبب غاز الميثان فى غلافه الجوى" },
+            { a: "دوران الأرض حول محورها", b: "مسئول عن تعاقب الليل والنهار كل 24 ساعة" },
+            { a: "دوران الأرض حول الشمس", b: "مسئول عن تعاقب فصول السنة الأربعة كل 365 يومًا وربع" },
+            { a: "ميل محور الأرض", b: "سبب اختلاف زاوية سقوط أشعة الشمس على مناطق الأرض" },
+            { a: "المزولة (الساعة الشمسية)", b: "أداة قديمة لتحديد الوقت اعتمادًا على طول الظل واتجاهه" },
+            // Hard
+            { a: "21 يونيو", b: "تاريخ الانقلاب الصيفى وبداية فصل الصيف" },
+            { a: "22 ديسمبر", b: "تاريخ الانقلاب الشتوى وبداية فصل الشتاء" },
+            { a: "21 مارس", b: "تاريخ الاعتدال الربيعى وبداية فصل الربيع" },
+            { a: "23 سبتمبر", b: "تاريخ الاعتدال الخريفى وبداية فصل الخريف" },
+            { a: "محاصيل صيفية", b: "البطيخ والخيار والكوسة" }
+        ];
+
+        const fillData = [
+            { text: "تتكون المجموعة الشمسية من الشمس وعدد ... كواكب.", blank: "8", options: ["8", "9", "7", "10"] },
+            { text: "كوكب ... هو أصغر كواكب المجموعة الشمسية وأقربها إلى الشمس.", blank: "عطارد", options: ["عطارد", "الزهرة", "الأرض", "المريخ"] },
+            { text: "كوكب الأرض يحتوى غلافه الجوى على غازى الأكسجين و... .", blank: "النيتروجين", options: ["النيتروجين", "الهيليوم", "الميثان", "الهيدروجين"] },
+            { text: "يُعرف كوكب المريخ بالكوكب ... .", blank: "الأحمر", options: ["الأحمر", "الأزرق", "الأخضر", "الأصفر"] },
+            { text: "أكبر كواكب المجموعة الشمسية قطرًا هو كوكب ... .", blank: "المشترى", options: ["المشترى", "زحل", "أورانوس", "نبتون"] },
+            { text: "يُعرف كوكب أورانوس بالكوكب ... بسبب غاز الميثان.", blank: "الأزرق", options: ["الأزرق", "الأحمر", "الأخضر", "الأصفر"] },
+            { text: "تدور الأرض حول محورها دورة كاملة كل ... ساعة.", blank: "24", options: ["24", "12", "48", "365"] },
+            { text: "يميل محور الأرض بزاوية مقدارها ... درجة عن العمودى على مستوى مدارها.", blank: "23.5", options: ["23.5", "45", "90", "0"] },
+            { text: "تدور الأرض حول الشمس مرة كل ... يومًا وربع.", blank: "365", options: ["365", "30", "24", "12"] },
+            { text: "تسمى الظاهرة التى تبدو فيها الشمس متحركة من الشرق للغرب بالحركة ... للشمس.", blank: "الظاهرية", options: ["الظاهرية", "الحقيقية", "المدارية", "الذاتية"] },
+            // Hard
+            { text: "يبدأ فصل الصيف بالانقلاب الصيفى فى تاريخ 21 ... .", blank: "يونيو", options: ["يونيو", "مارس", "سبتمبر", "ديسمبر"] },
+            { text: "يبدأ فصل الشتاء بالانقلاب الشتوى فى تاريخ 22 ... .", blank: "ديسمبر", options: ["ديسمبر", "يونيو", "مارس", "سبتمبر"] },
+            { text: "يكون طول الظل المتكون من عصا مثبتة أقل ما يمكن فى وقت ... .", blank: "الظهيرة", options: ["الظهيرة", "الشروق", "الغروب", "منتصف الليل"] },
+            { text: "من محاصيل الصيف فى مصر: البطيخ والخيار و... .", blank: "الكوسة", options: ["الكوسة", "القمح", "البرسيم", "الخس"] },
+            { text: "تُستخدم أداة قديمة تسمى ... لتحديد الوقت من طول الظل واتجاهه.", blank: "المزولة", options: ["المزولة", "البوصلة", "الإلكتروسكوب", "الميزان"] }
+        ];
+
+        // --- Core Logic & Timer ---
+        let gameState = { currentScreen: 'home', activeGame: null, score: 0, questionIndex: 0, subLevel: 0, tempData: null, onFeedbackClose: null };
+        const titles = { mcq: "الاختيار من متعدد", match: "لعبة التوصيل", tf: "صح أم خطأ", fill: "الكلمة المفقودة", bubbles: "الفقاعات المتساقطة", shoot: "التنشين المتحرك" };
+        let gameTimer, timeLeft = 60, maxTime = 60;
+        let animTimeout;
+
+        function startTimer() {
+            clearInterval(gameTimer); 
+            // All games get 60 seconds
+            maxTime = 60;
+            timeLeft = maxTime; 
+            updateTimerUI();
+            
+            gameTimer = setInterval(() => {
+                timeLeft--; updateTimerUI();
+                if (timeLeft <= 0) { clearInterval(gameTimer); handleTimeout(); }
+            }, 1000);
+        }
+
+        function stopTimer() { clearInterval(gameTimer); }
+        
+        function resumeTimer() {
+            clearInterval(gameTimer);
+            gameTimer = setInterval(() => {
+                timeLeft--; updateTimerUI();
+                if (timeLeft <= 0) { clearInterval(gameTimer); handleTimeout(); }
+            }, 1000);
+        }
+
+        function updateTimerUI() {
+            document.getElementById('timer-display').innerText = timeLeft;
+            document.getElementById('timer-bar').style.width = (timeLeft / maxTime * 100) + '%';
+        }
+
+        function pauseAnimations() {
+            document.querySelectorAll('.game-anim-element').forEach(t => t.style.animationPlayState = 'paused');
+        }
+
+        function handleTimeout() {
+            playSound('wrong');
+            pauseAnimations();
+
+            if (gameState.activeGame === 'match') { forceMatchSkip(); return; }
+
+            const qData = gameState.tempData[gameState.questionIndex];
+            let correctAns = qData.ans || (qData.isCorrect ? "صح" : "خطأ") || qData.blank;
+            
+            showFeedback(false, `انتهى الوقت! الإجابة الصحيحة هي: ${correctAns}`, () => {
+                gameState.questionIndex++;
+                if (gameState.activeGame === 'mcq') loadMCQQuestion();
+                else if (gameState.activeGame === 'tf') loadTFQuestion();
+                else if (gameState.activeGame === 'fill') loadFillQuestion();
+                else if (gameState.activeGame === 'bubbles') loadBubblesQuestion();
+                else if (gameState.activeGame === 'shoot') loadShootQuestion();
+            });
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('#main-container > div').forEach(el => {
+                if (el.id !== 'game-header' && el.id !== 'screen-home') el.classList.add('hidden');
+            });
+            if (screenId === 'home') {
+                document.getElementById('screen-home').classList.remove('hidden');
+                document.getElementById('game-header').classList.add('hidden');
+            } else {
+                document.getElementById('screen-home').classList.add('hidden');
+                document.getElementById('game-header').classList.remove('hidden');
+                document.getElementById('screen-' + screenId).classList.remove('hidden');
+                document.getElementById('current-game-title').innerText = titles[gameState.activeGame];
+                updateScoreDisplay();
+            }
+            gameState.currentScreen = screenId;
+        }
+
+        function goHome() {
+            playSound('click'); stopTimer(); pauseAnimations(); clearTimeout(animTimeout);
+            document.getElementById('feedback-modal').classList.add('hidden');
+            gameState.onFeedbackClose = null; showScreen('home');
+            document.getElementById('endgame-modal').classList.add('hidden'); gameState.activeGame = null;
+        }
+
+        function startGame(gameType) {
+            playSound('click'); initAudio(); 
+            gameState.activeGame = gameType; gameState.score = 0; gameState.questionIndex = 0; gameState.subLevel = 0;
+            
+            if (gameType === 'bubbles' || gameType === 'shoot') {
+                document.getElementById('timer-container').classList.add('opacity-0');
+            } else {
+                document.getElementById('timer-container').classList.remove('opacity-0');
+            }
+
+            if (gameType === 'mcq') initMCQ();
+            else if (gameType === 'match') initMatch();
+            else if (gameType === 'tf') initTF();
+            else if (gameType === 'fill') initFill();
+            else if (gameType === 'bubbles') initBubbles();
+            else if (gameType === 'shoot') initShoot();
+            showScreen(gameType);
+        }
+
+        function updateScoreDisplay() { document.getElementById('current-score').innerText = gameState.score; }
+        function endGame() {
+            stopTimer(); document.getElementById('endgame-score').innerText = gameState.score;
+            document.getElementById('endgame-modal').classList.remove('hidden'); playSound('correct');
+        }
+
+        function showFeedback(isCorrect, message, callback) {
+            const modal = document.getElementById('feedback-modal'); const content = document.getElementById('feedback-content');
+            const icon = document.getElementById('feedback-icon'); const title = document.getElementById('feedback-title');
+            const msg = document.getElementById('feedback-msg');
+            gameState.onFeedbackClose = callback;
+
+            if (isCorrect) {
+                playSound('correct'); icon.innerHTML = '<i class="fa-solid fa-circle-check text-green-500 popup-anim"></i>';
+                title.innerText = "إجابة صحيحة!"; title.className = "text-2xl font-bold mb-2 text-green-600";
+            } else {
+                playSound('wrong'); icon.innerHTML = '<i class="fa-solid fa-circle-xmark text-red-500 popup-anim"></i>';
+                title.innerText = "إجابة خاطئة"; title.className = "text-2xl font-bold mb-2 text-red-600";
+            }
+            msg.innerText = message || ""; modal.classList.remove('hidden');
+            setTimeout(() => { content.classList.remove('scale-50', 'opacity-0'); content.classList.add('scale-100', 'opacity-100'); }, 10);
+        }
+
+        function closeFeedback() {
+            playSound('click'); const modal = document.getElementById('feedback-modal');
+            const content = document.getElementById('feedback-content');
+            content.classList.remove('scale-100', 'opacity-100'); content.classList.add('scale-50', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                if (gameState.onFeedbackClose) { gameState.onFeedbackClose(); gameState.onFeedbackClose = null; }
+            }, 300);
+        }
+
+        // --- 1. MCQ ---
+        function initMCQ() { gameState.tempData = shuffleArray(mcqData); loadMCQQuestion(); }
+        function loadMCQQuestion() {
+            if (gameState.questionIndex >= 15) return endGame();
+            const qData = gameState.tempData[gameState.questionIndex];
+            document.getElementById('mcq-question').innerText = (gameState.questionIndex + 1) + ". " + qData.q;
+            document.getElementById('mcq-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+            const optionsDiv = document.getElementById('mcq-options'); optionsDiv.innerHTML = '';
+            shuffleArray(qData.options).forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "btn-bounce w-full bg-white border-2 border-blue-200 hover:bg-blue-50 text-blue-900 font-bold py-4 px-6 rounded-xl text-right shadow-sm text-lg transition-colors";
+                btn.innerText = opt; btn.onclick = () => { stopTimer(); checkMCQ(opt, qData.ans); };
+                optionsDiv.appendChild(btn);
+            });
+            startTimer();
+        }
+        function checkMCQ(selected, correct) {
+            const isCorrect = selected === correct;
+            if (isCorrect) gameState.score++; updateScoreDisplay();
+            showFeedback(isCorrect, isCorrect ? "أحسنت!" : `الإجابة الصحيحة هي: ${correct}`, () => { gameState.questionIndex++; loadMCQQuestion(); });
+        }
+
+        // --- 2. Bubbles Game (CSS Animation) ---
+        function initBubbles() { gameState.tempData = shuffleArray(bubblesData); loadBubblesQuestion(); }
+        function loadBubblesQuestion() {
+            if (gameState.questionIndex >= 15) return endGame();
+            const qData = gameState.tempData[gameState.questionIndex];
+            document.getElementById('bubbles-question').innerText = (gameState.questionIndex + 1) + ". " + qData.q;
+            document.getElementById('bubbles-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+            
+            const container = document.getElementById('bubbles-game-area'); container.innerHTML = '';
+            const opts = shuffleArray(qData.options);
+            const xPositions = [2, 27, 52, 77]; 
+
+            opts.forEach((opt, idx) => {
+                const bubble = document.createElement('div');
+                bubble.className = `game-anim-element anim-fall game-bubble absolute flex items-center justify-center p-2 w-20 h-20 sm:w-28 sm:h-28 text-xs sm:text-sm font-bold text-center cursor-pointer btn-bounce z-10`;
+                bubble.style.left = `${xPositions[idx]}%`;
+                bubble.innerText = opt;
+                bubble.onclick = () => processAnimGame(opt, qData.ans, 'bubbles');
+                container.appendChild(bubble);
+            });
+            
+            clearTimeout(animTimeout);
+            animTimeout = setTimeout(() => {
+                if (gameState.currentScreen === 'bubbles') processAnimTimeout('bubbles', qData.ans);
+            }, 25000);
+        }
+
+        // --- 3. Shoot Game (CSS Animation) ---
+        function initShoot() { gameState.tempData = shuffleArray(shootData); loadShootQuestion(); }
+        function loadShootQuestion() {
+            if (gameState.questionIndex >= 15) return endGame();
+            const qData = gameState.tempData[gameState.questionIndex];
+            document.getElementById('shoot-question').innerText = (gameState.questionIndex + 1) + ". " + qData.q;
+            document.getElementById('shoot-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+            
+            const container = document.getElementById('shoot-game-area'); container.innerHTML = '';
+            const opts = shuffleArray(qData.options);
+            const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b']; 
+            const yPositions = [10, 35, 60, 85]; 
+            const directions = [1, -1, 1, -1]; 
+
+            opts.forEach((opt, idx) => {
+                const target = document.createElement('div');
+                let animClass = directions[idx] === 1 ? 'anim-right' : 'anim-left';
+                target.className = `game-anim-element ${animClass} horizontal-target absolute text-gray-800 p-1 rounded-full text-center font-bold flex flex-col items-center justify-center w-20 h-20 sm:w-24 sm:h-24 text-[10px] sm:text-sm cursor-pointer z-10 btn-bounce`;
+                target.style.borderColor = colors[idx]; 
+                target.style.top = `calc(${yPositions[idx]}% - 20px)`;
+                
+                target.innerHTML = `<i class="fa-solid fa-bullseye text-2xl sm:text-3xl mb-1" style="color: ${colors[idx]}"></i><span>${opt}</span>`;
+                target.onclick = () => processAnimGame(opt, qData.ans, 'shoot');
+                container.appendChild(target);
+            });
+            
+            clearTimeout(animTimeout);
+            animTimeout = setTimeout(() => {
+                if (gameState.currentScreen === 'shoot') processAnimTimeout('shoot', qData.ans);
+            }, 20000);
+        }
+
+        // Shared processing for Animated Games (Bubbles & Shoot)
+        function processAnimGame(selected, correct, gameType) {
+            clearTimeout(animTimeout);
+            pauseAnimations();
+            const isCorrect = selected === correct;
+            if(isCorrect) gameState.score++; updateScoreDisplay();
+            showFeedback(isCorrect, isCorrect ? "إصابة دقيقة وممتازة!" : `للأسف أخطأت الهدف! الإجابة هي: ${correct}`, () => {
+                gameState.questionIndex++;
+                if(gameType === 'bubbles') loadBubblesQuestion(); else loadShootQuestion();
+            });
+        }
+
+        function processAnimTimeout(gameType, correct) {
+            playSound('wrong');
+            pauseAnimations();
+            showFeedback(false, `اختفت الأهداف! الإجابة الصحيحة هي: ${correct}`, () => {
+                gameState.questionIndex++;
+                if(gameType === 'bubbles') loadBubblesQuestion(); else loadShootQuestion();
+            });
+        }
+
+        // --- 4. True/False ---
+        function initTF() { gameState.tempData = shuffleArray(tfData); loadTFQuestion(); }
+        function loadTFQuestion() {
+            if (gameState.questionIndex >= 15) return endGame();
+            const currentItem = gameState.tempData[gameState.questionIndex];
+            document.getElementById('tf-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+            const tfStatement = document.getElementById('tf-statement'); tfStatement.innerText = currentItem.text;
+            tfStatement.classList.remove('popup-anim'); void tfStatement.offsetWidth; tfStatement.classList.add('popup-anim');
+            startTimer();
+        }
+        function checkTF(userAnswer) {
+            stopTimer(); const currentItem = gameState.tempData[gameState.questionIndex];
+            const isCorrect = currentItem.isCorrect === userAnswer;
+            if(isCorrect) gameState.score++; updateScoreDisplay();
+            showFeedback(isCorrect, isCorrect ? "إجابة صحيحة وممتازة!" : `إجابة خاطئة. العبارة ${currentItem.isCorrect?"صحيحة":"خاطئة"}.`, () => {
+                gameState.questionIndex++; loadTFQuestion();
+            });
+        }
+
+        // --- 5. Matching ---
+        function initMatch() { gameState.tempData = shuffleArray(matchData); gameState.subLevel = 0; gameState.questionIndex = 0; loadMatchRound(); }
+        function loadMatchRound() {
+            if (gameState.subLevel >= 3) return endGame();
+            const startIndex = gameState.subLevel * 5; const roundItems = gameState.tempData.slice(startIndex, startIndex + 5);
+            document.getElementById('match-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+            const listA = shuffleArray(roundItems.map(item => ({id: item.a, text: item.a, type: 'A'})));
+            const listB = shuffleArray(roundItems.map(item => ({id: item.a, text: item.b, type: 'B'}))); 
+            renderMatchList('match-list-a', listA); renderMatchList('match-list-b', listB);
+            matchSelectedA = null; matchSelectedB = null; startTimer();
+        }
+        function renderMatchList(containerId, items) {
+            const container = document.getElementById(containerId); container.innerHTML = '';
+            items.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = "match-item bg-white border-2 border-gray-200 text-gray-700 font-bold py-3 px-2 rounded-lg shadow-sm text-xs sm:text-sm text-center min-h-[60px] flex items-center justify-center";
+                btn.innerText = item.text; btn.dataset.id = item.id; btn.dataset.type = item.type;
+                btn.onclick = () => handleMatchClick(btn); container.appendChild(btn);
+            });
+        }
+        function handleMatchClick(btn) {
+            if(btn.classList.contains('matched') || btn.classList.contains('timeout-error')) return;
+            playSound('click'); const type = btn.dataset.type;
+            document.querySelectorAll(`#match-list-${type.toLowerCase()} .match-item`).forEach(el => {
+                if(!el.classList.contains('matched') && !el.classList.contains('timeout-error')) el.classList.remove('selected');
+            });
+            btn.classList.add('selected');
+            if (type === 'A') matchSelectedA = btn; else matchSelectedB = btn;
+            if (matchSelectedA && matchSelectedB) {
+                stopTimer(); const idA = matchSelectedA.dataset.id; const idB = matchSelectedB.dataset.id;
+                if (idA === idB) {
+                    matchSelectedA.classList.remove('selected'); matchSelectedA.classList.add('matched');
+                    matchSelectedB.classList.remove('selected'); matchSelectedB.classList.add('matched');
+                    gameState.score++; gameState.questionIndex++; updateScoreDisplay();
+                    document.getElementById('match-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+                    checkMatchRoundProgress(true);
+                } else {
+                    playSound('wrong'); matchSelectedA.classList.add('error'); matchSelectedB.classList.add('error');
+                    let a = matchSelectedA, b = matchSelectedB;
+                    setTimeout(() => { a.classList.remove('selected', 'error'); b.classList.remove('selected', 'error'); resumeTimer(); }, 500);
+                }
+                matchSelectedA = null; matchSelectedB = null;
+            }
+        }
+        function forceMatchSkip() {
+            matchSelectedA = null; matchSelectedB = null;
+            document.querySelectorAll('.match-item').forEach(el => el.classList.remove('selected'));
+            let unmatchedA = Array.from(document.querySelectorAll('#match-list-a .match-item')).find(el => !el.classList.contains('matched') && !el.classList.contains('timeout-error'));
+            if(unmatchedA) {
+                let id = unmatchedA.dataset.id; let unmatchedB = document.querySelector(`#match-list-b .match-item[data-id="${id}"]`);
+                showFeedback(false, "انتهى الوقت! فقدت هذه النقطة.", () => {
+                    unmatchedA.classList.add('timeout-error'); 
+                    if(unmatchedB) unmatchedB.classList.add('timeout-error');
+                    gameState.questionIndex++; document.getElementById('match-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+                    checkMatchRoundProgress(false);
+                });
+            }
+        }
+        function checkMatchRoundProgress(wasCorrect) {
+            const totalDone = document.querySelectorAll('#match-list-a .matched').length + document.querySelectorAll('#match-list-a .timeout-error').length;
+            if (totalDone === 5) {
+                if(wasCorrect) playSound('correct');
+                setTimeout(() => { gameState.subLevel++; loadMatchRound(); }, 1000);
+            } else {
+                if(wasCorrect) {
+                    playSound('correct'); 
+                }
+                startTimer();
+            }
+        }
+
+        // --- 6. Fill in the Blanks ---
+        function initFill() { gameState.tempData = shuffleArray(fillData); loadFillQuestion(); }
+        function loadFillQuestion() {
+            if (gameState.questionIndex >= 15) return endGame();
+            const currentItem = gameState.tempData[gameState.questionIndex];
+            document.getElementById('fill-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+            const sentenceHtml = currentItem.text.replace('...', '<span class="inline-block border-b-4 border-dashed border-purple-400 min-w-[70px] md:min-w-[100px] text-center text-purple-600 px-1 md:px-2 pb-1 mx-1 md:mx-2 relative top-1">؟</span>');
+            const sentenceEl = document.getElementById('fill-sentence'); sentenceEl.innerHTML = sentenceHtml;
+            sentenceEl.classList.remove('popup-anim'); void sentenceEl.offsetWidth; sentenceEl.classList.add('popup-anim');
+            const optionsContainer = document.getElementById('fill-options'); optionsContainer.innerHTML = '';
+            shuffleArray(currentItem.options).forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "btn-bounce bg-white hover:bg-purple-50 border-2 border-purple-200 text-purple-800 font-bold py-3 md:py-4 px-3 md:px-6 rounded-xl shadow-sm text-sm sm:text-base md:text-lg transition-colors";
+                btn.innerText = opt; btn.onclick = () => { stopTimer(); checkFill(opt, currentItem.blank); };
+                optionsContainer.appendChild(btn);
+            });
+            startTimer();
+        }
+        function checkFill(selected, correct) {
+            const isCorrect = selected === correct;
+            if (isCorrect) gameState.score++; updateScoreDisplay();
+            const sentenceEl = document.getElementById('fill-sentence');
+            if (isCorrect) sentenceEl.innerHTML = sentenceEl.innerHTML.replace('؟', selected).replace('border-dashed', 'border-solid border-green-500 text-green-600');
+            else sentenceEl.innerHTML = sentenceEl.innerHTML.replace('؟', selected).replace('border-dashed', 'border-solid border-red-500 text-red-600 line-through');
+            showFeedback(isCorrect, isCorrect ? "ممتاز! الكلمة في مكانها الصحيح." : `خطأ! الكلمة الصحيحة هي: ${correct}`, () => {
+                gameState.questionIndex++; loadFillQuestion();
+            });
+        }
+
+    </script>
+</body>
+</html>
